@@ -3,7 +3,7 @@
 This is PoC setup with an API manager in conjunction with an Azure firewall. 
 The setup is an API manager with several subnets in a VNet from where all traffic is routed through the Azure firewall. 
 
-![](documents/PoC APIM Firewall integration.png)
+![Diagram](documents/PoC_APIM_Firewall_integration.png)
 
 ## Stack 
 - Terraform 1.2+
