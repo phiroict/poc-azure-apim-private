@@ -3,7 +3,7 @@
 This is PoC setup with an API manager in conjunction with an Azure firewall. 
 The setup is an API manager with several subnets in a VNet from where all traffic is routed through the Azure firewall. 
 
-
+![](documents/PoC APIM Firewall integration.png)
 
 ## Stack 
 - Terraform 1.2+
@@ -24,11 +24,12 @@ az login
 Initialize the project 
 
 ```bash
-make init 
+make cdk_get 
 ```
 
 Then deploy the stack  
 (Note this will take about an hour)
+
 ```bash 
 make cdk_deploy 
 ```
