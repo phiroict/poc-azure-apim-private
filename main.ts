@@ -304,24 +304,24 @@ class MyStack extends TerraformStack {
         });
 
 
-        const route = new Route(this, "route_to_fw", {
-            //addressPrefix: Fn.element(network.addressSpace,0),
-            addressPrefix: "0.0.0.0/0",
-            name: "demo-poc-apim-routeall-fw",
-            nextHopInIpAddress: firewall.ipConfiguration.get(0).privateIpAddress,
-            nextHopType: "VirtualAppliance",
-            resourceGroupName: rg.name,
-            routeTableName: routeTable.name,
-        });
-
         // const route = new Route(this, "route_to_fw", {
         //     //addressPrefix: Fn.element(network.addressSpace,0),
         //     addressPrefix: "0.0.0.0/0",
         //     name: "demo-poc-apim-routeall-fw",
-        //     nextHopType: "Internet",
+        //     nextHopInIpAddress: firewall.ipConfiguration.get(0).privateIpAddress,
+        //     nextHopType: "VirtualAppliance",
         //     resourceGroupName: rg.name,
         //     routeTableName: routeTable.name,
         // });
+
+        const route = new Route(this, "route_to_fw", {
+            //addressPrefix: Fn.element(network.addressSpace,0),
+            addressPrefix: "0.0.0.0/0",
+            name: "demo-poc-apim-routeall-fw",
+            nextHopType: "Internet",
+            resourceGroupName: rg.name,
+            routeTableName: routeTable.name,
+        });
 
         let ix = 0;
         for (const ip of global_env_apim) {
