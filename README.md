@@ -48,3 +48,46 @@ Getting ms addresses from this article:
 
 https://techcommunity.microsoft.com/t5/azure-paas-blog/api-management-networking-faqs-demystifying-series-ii/ba-p/1502056
 
+# Notes 
+
+## Remove soft deleted api managers 
+When deleting an API manager the manager is in a soft deleted state, for a time you can reactivate it. 
+This means if you rerun the cdk stack again it may fail as the api manager name is still in use. You can delete 
+the service through a special command as it will not show in the normal apim listing: 
+
+
+List the deleted services with 
+
+```bash
+az apim deletedservice list
+```
+
+You get something like 
+
+```json 
+[
+  {
+    "deletionDate": "2022-07-08T05:02:53.339434+00:00",
+    "id": "/subscriptions/lalalala/providers/Microsoft.ApiManagement/locations/eastus/deletedservices/PhiRoAPIMDemoMTFv1",
+    "location": "East US",
+    "name": "PhiRoAPIMdemov1",
+    "scheduledPurgeDate": "2022-07-10T04:55:39.642152+00:00",
+    "serviceId": "/subscriptions/lalalala/resourceGroups/mtf-poc-apim/providers/Microsoft.ApiManagement/service/PhiRoAPIMDemoMTFv1",
+    "type": "Microsoft.ApiManagement/deletedservices"
+  }
+]
+
+```
+
+Then delete it with
+```bash
+az apim deletedservice purge --service-name PhiRoAPIdemov1 --location eastus
+```
+
+Of course the field name used in the command is different from the list output (`name` vs `service-name`) because reasons!
+
+## stv1 or stv2 ? 
+
+Does not show anywhere but in a specific version of the json view:
+https://docs.microsoft.com/en-gb/azure/api-management/compute-infrastructure#how-do-i-know-which-platform-hosts-my-api-management-instance
+

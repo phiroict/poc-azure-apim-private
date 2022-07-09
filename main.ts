@@ -17,8 +17,10 @@ import {
     RouteTable,
     Route,
     FirewallApplicationRuleCollection,
-    /*SubnetRouteTableAssociation,*/
-    NetworkSecurityGroup, SubnetNetworkSecurityGroupAssociation, ApiManagementGateway,
+    SubnetRouteTableAssociation,
+    NetworkSecurityGroup,
+    SubnetNetworkSecurityGroupAssociation,
+    ApiManagementGateway,
 } from "./.gen/providers/azurerm";
 
 class MyStack extends TerraformStack {
@@ -32,7 +34,7 @@ class MyStack extends TerraformStack {
             "104.214.19.224/32",
             "52.162.110.80/32",
             control_plane_apim_ae
-        ]
+        ]  // Global external ip addresses for API management
 
         new AzurermBackend(this, {
             resourceGroupName: "example-resource-group",
@@ -66,6 +68,17 @@ class MyStack extends TerraformStack {
             addressPrefixes: ["10.3.12.0/24"],
             resourceGroupName: rg.name,
             virtualNetworkName: network.name,
+            delegation: [
+                {
+                    name: "APIM_delegation",
+                    serviceDelegation: {
+                        name: "Microsoft.ApiManagement/service",
+                        actions: [
+                            "Microsoft.Network/networkinterfaces/*"
+                        ]
+                    }
+                }
+            ]
         });
 
         const subnet_app = new Subnet(this, "myapp", {
@@ -91,7 +104,7 @@ class MyStack extends TerraformStack {
             securityRule: [{
                 name: "allow_https_traffid_in",
                 access: "Allow",
-                protocol: "Tcp",
+                protocol: "*",
                 sourcePortRange: "443",
                 sourceAddressPrefix: Fn.element(network.addressSpace, 0),
                 destinationPortRange: "443",
@@ -102,7 +115,7 @@ class MyStack extends TerraformStack {
             {
                 name: "allow_https_traffid_out",
                 access: "Allow",
-                protocol: "Tcp",
+                protocol: "*",
                 sourcePortRange: "443",
                 sourceAddressPrefix: Fn.element(subnet_app.addressPrefixes, 0),
                 destinationPortRange: "443",
@@ -125,8 +138,8 @@ class MyStack extends TerraformStack {
                 {
                     name: "connect_out_3443",
                     access: "Allow",
-                    protocol: "Tcp",
-                    sourcePortRange: "3443",
+                    protocol: "*",
+                    sourcePortRange: "*",
                     destinationPortRange: "3443",
                     destinationAddressPrefix: "*",
                     sourceAddressPrefix: "*",
@@ -136,18 +149,18 @@ class MyStack extends TerraformStack {
                 {
                     name: "connect_out_1443",
                     access: "Allow",
-                    protocol: "Tcp",
-                    sourcePortRange: "1443",
+                    protocol: "*",
+                    sourcePortRange: "*",
                     destinationPortRange: "1443",
                     destinationAddressPrefix: "*",
                     sourceAddressPrefix: "*",
                     direction: "Outbound",
                     priority: 101
                 },
-                {
+                { //check
                     name: "connect_out_443",
                     access: "Allow",
-                    protocol: "Tcp",
+                    protocol: "*",
                     sourcePortRange: "443",
                     destinationPortRange: "443",
                     destinationAddressPrefix: "*",
@@ -155,38 +168,93 @@ class MyStack extends TerraformStack {
                     direction: "Outbound",
                     priority: 102
                 },
-                {
+                { //check
+                    name: "connect_out_5671",
+                    access: "Allow",
+                    protocol: "*",
+                    sourcePortRange: "*",
+                    destinationPortRange: "5671-5672",
+                    destinationAddressPrefix: "*",
+                    sourceAddressPrefix: "*",
+                    direction: "Outbound",
+                    priority: 103
+                },
+                { //check
+                    name: "connect_out_12000",
+                    access: "Allow",
+                    protocol: "*",
+                    sourcePortRange: "*",
+                    destinationPortRange: "12000",
+                    destinationAddressPrefix: "*",
+                    sourceAddressPrefix: "*",
+                    direction: "Outbound",
+                    priority: 104
+                },
+                { //check
+                    name: "connect_out_587",
+                    access: "Allow",
+                    protocol: "*",
+                    sourcePortRange: "*",
+                    destinationPortRange: "587",
+                    destinationAddressPrefix: "*",
+                    sourceAddressPrefix: "*",
+                    direction: "Outbound",
+                    priority: 105
+                },
+                { //check
+                    name: "connect_out_1886",
+                    access: "Allow",
+                    protocol: "*",
+                    sourcePortRange: "*",
+                    destinationPortRange: "1886",
+                    destinationAddressPrefix: "*",
+                    sourceAddressPrefix: "*",
+                    direction: "Outbound",
+                    priority: 106
+                },
+                { //check
                     name: "connect_in_443",
                     access: "Allow",
-                    protocol: "Tcp",
-                    sourcePortRange: "443",
+                    protocol: "*",
+                    sourcePortRange: "*",
                     destinationPortRange: "443",
                     destinationAddressPrefix: "*",
                     sourceAddressPrefix: "*",
                     direction: "Inbound",
                     priority: 100
                 },
-                {
+                { //check
                     name: "connect_in_3443",
                     access: "Allow",
-                    protocol: "Tcp",
-                    sourcePortRange: "3443",
+                    protocol: "*",
+                    sourcePortRange: "*",
                     destinationPortRange: "3443",
-                    destinationAddressPrefix: "VirtualNetwork",
-                    sourceAddressPrefix: "ApiManagement",
+                    destinationAddressPrefix: "*",
+                    sourceAddressPrefix: "*",
                     direction: "Inbound",
                     priority: 101
                 },
                 {
                     name: "connect_in_6390",
                     access: "Allow",
-                    protocol: "Tcp",
+                    protocol: "*",
                     sourcePortRange: "6390",
                     destinationPortRange: "6390",
                     destinationAddressPrefix: "*",
                     sourceAddressPrefix: "*",
                     direction: "Inbound",
                     priority: 102
+                },
+                {
+                    name: "connect_in_lb",
+                    access: "Allow",
+                    protocol: "*",
+                    sourcePortRange: "*",
+                    destinationPortRange: "*",
+                    destinationAddressPrefix: "VirtualNetwork",
+                    sourceAddressPrefix: "AzureLoadBalancer",
+                    direction: "Inbound",
+                    priority: 103
                 }
 
             ]
@@ -210,7 +278,7 @@ class MyStack extends TerraformStack {
 
         const firewall = new Firewall(this, "APIManagmentFirewall", {
             location: rg.location,
-            name: "MTF-PoC-APIM-FW",
+            name: "DEMO-PoC-APIM-FW",
             skuName: "AZFW_VNet",
             skuTier: "Standard",
             resourceGroupName: rg.name,
@@ -227,33 +295,43 @@ class MyStack extends TerraformStack {
             resourceGroupName: rg.name
         });
 
-        new Route(this, "route_to_fw", {
+        // new Route(this, "route_to_fw", {
+        //     //addressPrefix: Fn.element(network.addressSpace,0),
+        //     addressPrefix: "0.0.0.0/0",
+        //     name: "demo-poc-apim-routeall-fw",
+        //     nextHopInIpAddress: firewall.ipConfiguration.get(0).privateIpAddress,
+        //     nextHopType: "VirtualAppliance",
+        //     resourceGroupName: rg.name,
+        //     routeTableName: routeTable.name,
+        // });
+
+        const route = new Route(this, "route_to_fw", {
             //addressPrefix: Fn.element(network.addressSpace,0),
             addressPrefix: "0.0.0.0/0",
             name: "demo-poc-apim-routeall-fw",
-            nextHopInIpAddress: firewall.ipConfiguration.get(0).privateIpAddress,
-            nextHopType: "VirtualAppliance",
+            nextHopType: "Internet",
             resourceGroupName: rg.name,
             routeTableName: routeTable.name,
         });
+
         let ix = 0;
         for (const ip of global_env_apim) {
             new Route(this, "route_to_fw_apim_control" + ix, {
                 //addressPrefix: Fn.element(network.addressSpace,0),
                 addressPrefix: ip,
-                name: "demo-poc-apim-control" + ix + "-fw",
+                name: "demo-poc-apim-control" + ix++ + "-fw",
                 nextHopType: "Internet",
                 resourceGroupName: rg.name,
                 routeTableName: routeTable.name,
             });
-            ++ix;
+
         }
 
 
-        // new SubnetRouteTableAssociation(this, "default_route_subnet", {
-        //     routeTableId: routeTable.id,
-        //     subnetId: subnet.id,
-        // })
+        new SubnetRouteTableAssociation(this, "default_route_subnet", {
+            routeTableId: routeTable.id,
+            subnetId: subnet.id,
+        });
 
 
         const apim = new ApiManagement(this, "myprivateapim", {
@@ -268,6 +346,7 @@ class MyStack extends TerraformStack {
             virtualNetworkConfiguration: {
                 subnetId: subnet.id,
             },
+            dependsOn: [sg, route]
         });
 
         new ApiManagementGateway(this, "api_gateway", {
@@ -301,7 +380,7 @@ class MyStack extends TerraformStack {
                         port: 3443,
                         type: "Https"
                     }],
-                    targetFqdns: ["phiroapimdemodemov1.management.azure-api.net"]
+                    targetFqdns: ["phiroapimdemomtfv1.management.azure-api.net"]
                 },
                 {
                     name: "connect_to_developer_interface",
@@ -310,7 +389,7 @@ class MyStack extends TerraformStack {
                         port: 443,
                         type: "Https"
                     }],
-                    targetFqdns: ["phiroapimdemodemov1.developer.azure-api.net"]
+                    targetFqdns: ["phiroapimdemomtfv1.developer.azure-api.net"]
                 },
                 {
                     name: "connect_to_dewveloper_interface_users",
@@ -319,7 +398,7 @@ class MyStack extends TerraformStack {
                         port: 443,
                         type: "Https"
                     }],
-                    targetFqdns: ["phiroapimdemodemov1.management.azure-api.net"]
+                    targetFqdns: ["phiroapimdemomtfv1.management.azure-api.net"]
                 }]
         });
 
