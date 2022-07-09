@@ -20,7 +20,7 @@ import {
     SubnetRouteTableAssociation,
     NetworkSecurityGroup,
     SubnetNetworkSecurityGroupAssociation,
-    ApiManagementGateway,
+    ApiManagementGateway, FirewallNetworkRuleCollection, LogAnalyticsWorkspace,
 } from "./.gen/providers/azurerm";
 
 class MyStack extends TerraformStack {
@@ -276,6 +276,13 @@ class MyStack extends TerraformStack {
             sku: "Standard"
         });
 
+        new LogAnalyticsWorkspace(this, "analytics_cluster_firewall", {
+            location: rg.location,
+            name: "workspace-firewall",
+            resourceGroupName: rg.name,
+
+        });
+
         const firewall = new Firewall(this, "APIManagmentFirewall", {
             location: rg.location,
             name: "DEMO-PoC-APIM-FW",
@@ -286,7 +293,8 @@ class MyStack extends TerraformStack {
                 name: "configuration",
                 subnetId: fw_subnet.id,
                 publicIpAddressId: pip.id,
-            }]
+            }],
+
         });
 
         const routeTable = new RouteTable(this, "FW_Router", {
@@ -295,24 +303,25 @@ class MyStack extends TerraformStack {
             resourceGroupName: rg.name
         });
 
-        // new Route(this, "route_to_fw", {
-        //     //addressPrefix: Fn.element(network.addressSpace,0),
-        //     addressPrefix: "0.0.0.0/0",
-        //     name: "demo-poc-apim-routeall-fw",
-        //     nextHopInIpAddress: firewall.ipConfiguration.get(0).privateIpAddress,
-        //     nextHopType: "VirtualAppliance",
-        //     resourceGroupName: rg.name,
-        //     routeTableName: routeTable.name,
-        // });
 
         const route = new Route(this, "route_to_fw", {
             //addressPrefix: Fn.element(network.addressSpace,0),
             addressPrefix: "0.0.0.0/0",
             name: "demo-poc-apim-routeall-fw",
-            nextHopType: "Internet",
+            nextHopInIpAddress: firewall.ipConfiguration.get(0).privateIpAddress,
+            nextHopType: "VirtualAppliance",
             resourceGroupName: rg.name,
             routeTableName: routeTable.name,
         });
+
+        // const route = new Route(this, "route_to_fw", {
+        //     //addressPrefix: Fn.element(network.addressSpace,0),
+        //     addressPrefix: "0.0.0.0/0",
+        //     name: "demo-poc-apim-routeall-fw",
+        //     nextHopType: "Internet",
+        //     resourceGroupName: rg.name,
+        //     routeTableName: routeTable.name,
+        // });
 
         let ix = 0;
         for (const ip of global_env_apim) {
@@ -399,8 +408,27 @@ class MyStack extends TerraformStack {
                         type: "Https"
                     }],
                     targetFqdns: ["phiroapimdemomtfv1.management.azure-api.net"]
-                }]
+                },
+            ]
         });
+
+        new FirewallNetworkRuleCollection(this, "vnet_routing", {
+            action: "Allow",
+            azureFirewallName: firewall.name,
+            priority: 400,
+            resourceGroupName: rg.name,
+            rule: [{
+                name: "VNet_internal",
+                sourceAddresses: network.addressSpace,
+                destinationAddresses: network.addressSpace,
+                description: "VNET connectivity",
+                destinationPorts: ["*"],
+                protocols: ["Any"]
+            }],
+            name: "Internal_Routing_Firewall"
+        });
+
+
 
 
         new TerraformOutput(this, "apim_internal_addresess", {
@@ -408,6 +436,9 @@ class MyStack extends TerraformStack {
         });
         new TerraformOutput(this, "firewall_external_addresess", {
             value: pip.ipAddress
+        });
+        new TerraformOutput(this, "firewall_internal_addresess", {
+            value: firewall.ipConfiguration.get(0).privateIpAddress
         });
 
 
