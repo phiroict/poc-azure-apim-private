@@ -20,7 +20,10 @@ import {
     SubnetRouteTableAssociation,
     NetworkSecurityGroup,
     SubnetNetworkSecurityGroupAssociation,
-    ApiManagementGateway, FirewallNetworkRuleCollection, LogAnalyticsWorkspace,
+    ApiManagementGateway,
+    FirewallNetworkRuleCollection,
+    LogAnalyticsWorkspace,
+    FirewallNatRuleCollectionTimeoutsOutputReference, FirewallNatRuleCollection,
 } from "./.gen/providers/azurerm";
 
 class MyStack extends TerraformStack {
@@ -427,6 +430,27 @@ class MyStack extends TerraformStack {
             }],
             name: "Internal_Routing_Firewall"
         });
+        // Under investigation
+        new FirewallNatRuleCollection(this, "NAT_Rules", {
+            action: "Dnat",
+            azureFirewallName: firewall.name,
+            name: "apim_access_in",
+            priority: 1000,
+            resourceGroupName: rg.name,
+            rule: [{
+                name: "API_Local_APIM",
+                description: "Get the external access to the API manager",
+                sourceAddresses: ["0.0.0.0/0"],
+                destinationAddresses: Fn.element( apim.privateIpAddresses,0 ),
+                destinationPorts: ["443"],
+                protocols: ["Tcp","Udp"],
+                translatedAddress: Fn.element( apim.privateIpAddresses,0 ),
+                translatedPort: "443"
+
+
+            }]
+
+        })
 
 
 
